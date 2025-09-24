@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMG Label Printer Selection</title>
+    <!-- Load Tailwind CSS from CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-xl shadow-lg p-8 sm:p-12 max-w-lg w-full text-center">
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-800 mb-2">DMG Label Printer</h1>
+        <p class="text-lg text-gray-600 mb-8">Please select the tool you need to use.</p>
+        
+        <div class="space-y-4">
+            <!-- Link to DYMO Rework Labels -->
+            <a href="/dymo_rework_labels" class="block">
+                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                    DYMO Rework Labels
+                </button>
+            </a>
+            
+            <!-- Link to DYMO Job Order Label Printer -->
+            <a href="/dymo_job_order" class="block">
+                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                    DYMO Job Order Label Printer
+                </button>
+            </a>
+            
+            <!-- Link to Gaston Label Printer -->
+            <a href="/gaston_label_print" class="block">
+                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                    Gaston Label Printer
+                </button>
+            </a>
+            
+            <!-- Link to Locate My Hardware -->
+            <a href="/locate_my_hardware" class="block">
+                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-md">
+                    Locate My Hardware
+                </button>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

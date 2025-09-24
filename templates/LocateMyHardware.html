@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Locate My Hardware</title>
+    <style>
+        /* Reusing the modern and clean design from the original file */
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --background-color: #f4f7f9;
+            --card-background: #fff;
+            --text-color: #333;
+            --border-color: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background-color: var(--card-background);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px var(--shadow-color);
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #7f8c8d;
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            text-align: left;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        select:focus {
+            border-color: var(--secondary-color);
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px 20px;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .alert-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            display: none;
+            text-align: left;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .section-break {
+            margin: 30px 0;
+            border: none;
+            border-top: 1px solid var(--border-color);
+        }
+
+        #admin-location-list {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+        }
+        
+        #admin-location-list li {
+            background-color: #ecf0f1;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #admin-location-list li button {
+            width: auto;
+            padding: 5px 10px;
+            background-color: #e74c3c;
+        }
+        
+        #admin-location-list li button:hover {
+            background-color: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Locate My Hardware</h1>
+        <p>A simple tool for the assembly crew and storeroom clerk.</p>
+
+        <div id="main-screen">
+            <div>
+                <h3>Log New Hardware Location</h3>
+                <label for="clerk-job-number">Job Number:</label>
+                <input type="text" id="clerk-job-number" placeholder="Enter Job Number">
+
+                <label for="clerk-location">Hardware Location:</label>
+                <select id="clerk-location">
+                    <option value="">-- Select a Location --</option>
+                </select>
+                <button onclick="logLocation()">Log Location</button>
+            </div>
+            
+            <hr class="section-break">
+            
+            <div>
+                <h3>Hardware Lookup</h3>
+                <label for="assembly-job-input">Enter Job Number:</label>
+                <input type="text" id="assembly-job-input" placeholder="e.g., H0624-0000">
+                <button onclick="lookupJob()">Search for Location</button>
+                <button onclick="sendTeamsMessage()">Job Not Pulled? Send Alert to Clerk</button>
+                <div id="results">
+                    <h4>Location: <span id="location-display"></span></h4>
+                </div>
+            </div>
+            
+            <hr class="section-break">
+            <button onclick="showLoginScreen()">Admin Login</button>
+        </div>
+        
+        <div id="login-screen" style="display: none;">
+            <h3>Admin Access</h3>
+            <label for="admin-password">Password:</label>
+            <input type="password" id="admin-password" placeholder="Enter password to log in">
+            <button onclick="loginAdmin()">Log In</button>
+            <button onclick="showMainScreen()" style="background-color: #7f8c8d;">Cancel</button>
+        </div>
+
+        <div id="admin-controls" style="display: none;">
+            <hr class="section-break">
+            <h4>Manage Locations</h4>
+            <label for="new-location-input">New Location:</label>
+            <input type="text" id="new-location-input" placeholder="e.g., Bin 3A">
+            <button onclick="addLocation()">Add New Location</button>
+            <ul id="admin-location-list"></ul>
+            
+            <hr class="section-break">
+            
+            <h4>Set Teams Webhook URL (Hardware)</h4>
+            <label for="webhook-input">Webhook URL:</label>
+            <input type="text" id="webhook-input" placeholder="Paste the webhook URL here">
+            <button onclick="setHardwareWebhook()">Save Webhook</button>
+            
+            <hr class="section-break">
+            <button onclick="showMainScreen()" style="background-color: #7f8c8d;">Return to Main Screen</button>
+        </div>
+        
+        <hr class="section-break">
+        <a href="/">
+            <button style="background-color: #7f8c8d;">Return to Home</button>
+        </a>
+
+        <div id="alertBox" class="alert-box"></div>
+
+    </div>
+
+    <script>
+        // NOTE: For a real application, the password should NOT be in the HTML.
+        // It should be stored securely on the server. This is for demonstration only.
+        const ADMIN_PASSWORD = "password123";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchLocations();
+        });
+
+        function showAlert(message, type) {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.textContent = message;
+            alertBox.className = `alert-box ${type}`;
+            alertBox.style.display = 'block';
+            setTimeout(() => {
+                alertBox.style.display = 'none';
+            }, 5000);
+        }
+
+        function showLoginScreen() {
+            document.getElementById('main-screen').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'block';
+            document.getElementById('admin-password').value = '';
+        }
+
+        function showMainScreen() {
+            document.getElementById('main-screen').style.display = 'block';
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('admin-controls').style.display = 'none';
+        }
+
+        function loginAdmin() {
+            const passwordInput = document.getElementById('admin-password').value;
+            if (passwordInput === ADMIN_PASSWORD) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('admin-controls').style.display = 'block';
+                showAlert("Admin login successful!", 'alert-success');
+                // Fetch locations and webhook URL for the admin view
+                fetchLocations();
+                getHardwareWebhook();
+            } else {
+                showAlert("Incorrect password. Please try again.", 'alert-error');
+            }
+        }
+
+        async function fetchLocations() {
+            try {
+                const response = await fetch('/get_predefined_locations');
+                if (response.ok) {
+                    const locations = await response.json();
+                    const clerkDropdown = document.getElementById('clerk-location');
+                    const adminList = document.getElementById('admin-location-list');
+                    
+                    clerkDropdown.innerHTML = '<option value="">-- Select a Location --</option>';
+                    adminList.innerHTML = '';
+
+                    locations.forEach(loc => {
+                        const option = document.createElement('option');
+                        option.value = loc;
+                        option.textContent = loc;
+                        clerkDropdown.appendChild(option);
+                        
+                        const listItem = document.createElement('li');
+                        listItem.textContent = loc;
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.textContent = 'Delete';
+                        deleteBtn.onclick = () => deleteLocation(loc);
+                        listItem.appendChild(deleteBtn);
+                        adminList.appendChild(listItem);
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to fetch predefined locations:", e);
+                showAlert("Failed to load locations from server.", 'alert-error');
+            }
+        }
+
+        async function logLocation() {
+            const jobNumber = document.getElementById('clerk-job-number').value.trim();
+            const location = document.getElementById('clerk-location').value.trim();
+
+            if (!jobNumber || !location) {
+                showAlert("Please enter a job number and select a location.", 'alert-error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/log_location', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ job_number: jobNumber, location: location })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert(data.message, 'alert-success');
+                    document.getElementById('clerk-job-number').value = '';
+                } else {
+                    showAlert(data.error, 'alert-error');
+                }
+            } catch (e) {
+                showAlert("Could not connect to the server. Please ensure it is running.", 'alert-error');
+                console.error("Error logging location:", e);
+            }
+        }
+
+        async function lookupJob() {
+            const jobNumber = document.getElementById('assembly-job-input').value.trim();
+            const locationDisplay = document.getElementById('location-display');
+            locationDisplay.textContent = 'Searching...';
+
+            if (!jobNumber) {
+                locationDisplay.textContent = '';
+                showAlert("Please enter a job number to search for.", 'alert-error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/lookup/${jobNumber}`);
+                const data = await response.json();
+                if (response.ok) {
+                    locationDisplay.textContent = data.location;
+                    showAlert("Location found!", 'alert-success');
+                } else {
+                    locationDisplay.textContent = 'Not found.';
+                    showAlert(data.error, 'alert-error');
+                }
+            } catch (e) {
+                showAlert("Could not connect to the server. Please ensure it is running.", 'alert-error');
+                console.error("Error looking up location:", e);
+            }
+        }
+
+        async function sendTeamsMessage() {
+            const jobNumber = document.getElementById('assembly-job-input').value.trim();
+
+            if (!jobNumber) {
+                showAlert("Please enter a job number to send a message.", 'alert-error');
+                return;
+            }
+            try {
+                const response = await fetch('/send_message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ job_number: jobNumber })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert(data.message, 'alert-success');
+                } else {
+                    showAlert(data.error, 'alert-error');
+                }
+            } catch (e) {
+                showAlert("Could not connect to the server. Please ensure it is running.", 'alert-error');
+                console.error("Error sending Teams message:", e);
+            }
+        }
+
+        async function addLocation() {
+            const locationName = document.getElementById('new-location-input').value.trim();
+            if (!locationName) {
+                showAlert("Please enter a location name.", 'alert-error');
+                return;
+            }
+            try {
+                const response = await fetch('/add_predefined_location', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: locationName })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert(data.message, 'alert-success');
+                    document.getElementById('new-location-input').value = '';
+                    fetchLocations(); // Refresh both dropdown and admin list
+                } else {
+                    showAlert(data.error, 'alert-error');
+                }
+            } catch (e) {
+                showAlert("Could not connect to the server.", 'alert-error');
+                console.error("Error adding location:", e);
+            }
+        }
+        
+        async function deleteLocation(locationName) {
+            if (!confirm(`Are you sure you want to delete the location "${locationName}"?`)) {
+                return;
+            }
+            try {
+                const response = await fetch('/delete_predefined_location', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: locationName })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert(data.message, 'alert-success');
+                    fetchLocations(); // Refresh both dropdown and admin list
+                } else {
+                    showAlert(data.error, 'alert-error');
+                }
+            } catch (e) {
+                showAlert("Could not connect to the server.", 'alert-error');
+                console.error("Error deleting location:", e);
+            }
+        }
+
+        async function setHardwareWebhook() {
+            const webhookUrl = document.getElementById('webhook-input').value.trim();
+            if (!webhookUrl) {
+                showAlert("Please enter a valid webhook URL.", 'alert-error');
+                return;
+            }
+            try {
+                const response = await fetch('/set_webhook', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ webhook_name: 'hardware', webhook_url: webhookUrl })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert(data.message, 'alert-success');
+                } else {
+                    showAlert(data.error, 'alert-error');
+                }
+            } catch (e) {
+                showAlert("Could not connect to the server.", 'alert-error');
+                console.error("Error saving webhook:", e);
+            }
+        }
+        
+        async function getHardwareWebhook() {
+            try {
+                const response = await fetch(`/get_webhook/hardware`);
+                const data = await response.json();
+                if (response.url) {
+                    document.getElementById('webhook-input').value = data.url;
+                }
+            } catch (e) {
+                console.error("Error getting webhook URL:", e);
+            }
+        }
+    </script>
+</body>
+</html>

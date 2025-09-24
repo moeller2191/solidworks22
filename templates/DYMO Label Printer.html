@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DYMO Job Order Label Printer</title>
+    <script src="/static/dymo.connect.framework.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.17.0/dist/xlsx.full.min.js"></script>
+    <style>
+        /* Modern & Clean Design */
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --background-color: #f4f7f9;
+            --card-background: #fff;
+            --text-color: #333;
+            --border-color: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.08);
+            --delete-color: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background-color: var(--card-background);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px var(--shadow-color);
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-align: left;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .alert.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .alert-success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .alert-error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .input-group input {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        
+        .btn-toggle {
+            background-color: var(--primary-color);
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .btn-toggle:hover {
+            background-color: #233140;
+        }
+
+        .btn-primary {
+            background-color: var(--secondary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+
+        .btn-delete {
+            background-color: var(--delete-color);
+            padding: 8px 12px;
+        }
+
+        .btn-delete:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-delete:active {
+            transform: translateY(1px);
+        }
+
+        /* Collapsible Admin Panel */
+        #admin-panel {
+            margin-top: 20px;
+            border-top: 2px solid var(--border-color);
+            padding-top: 20px;
+            display: none;
+            text-align: left;
+        }
+        
+        #admin-panel h3 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+
+        #exceptions-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+        }
+
+        #exceptions-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background-color: var(--background-color);
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="alert-container" class="alert"></div>
+
+        <h1>DYMO Job Order Label Printer</h1>
+        <p>Enter the job number to print labels.</p>
+        
+        <div class="input-group">
+            <input type="text" id="job-number-input" placeholder="Enter Job Number">
+            <button class="btn btn-primary" onclick="printLabel()">Print Labels</button>
+        </div>
+
+        <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="window.history.back()">Home</button>
+
+        <button class="btn btn-toggle" onclick="toggleAdminPanel()">Open Admin Panel</button>
+
+        <div id="admin-panel">
+            <h3>Manage Exception Strings</h3>
+            <div class="input-group">
+                <input type="text" id="exception-input" placeholder="Add new exception string">
+                <button class="btn btn-primary" onclick="addException()">Add</button>
+            </div>
+    
+            <h4>Current Exception Strings</h4>
+            <ul id="exceptions-list">
+                <!-- Exception strings will be loaded here -->
+            </ul>
+
+            <h3>Upload Job Order Label Template (.dymo)</h3>
+            <div class="input-group">
+                <input type="file" id="label-template-input" accept=".dymo">
+                <button class="btn btn-primary" onclick="uploadLabelTemplate()">Upload</button>
+            </div>
+            <h3>Upload Gaston Label Template (.dymo)</h3>
+            <div class="input-group">
+                <input type="file" id="gaston-label-template-input" accept=".dymo">
+                <button class="btn btn-primary" onclick="uploadGastonLabelTemplate()">Upload</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Custom alert function to replace window.alert
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alert-container');
+            alertContainer.textContent = message;
+            alertContainer.className = `alert show ${type}`;
+            setTimeout(() => {
+                alertContainer.className = 'alert';
+            }, 3000); // Hide after 3 seconds
+        }
+
+        // --- Admin Panel Functions ---
+        function toggleAdminPanel() {
+            const panel = document.getElementById('admin-panel');
+            const button = document.querySelector('.btn-toggle');
+            if (panel.style.display === "block") {
+                // Closing: no password required
+                panel.style.display = "none";
+                button.textContent = "Open Admin Panel";
+            } else {
+                // Opening: require password
+                const password = prompt("Please enter the password to open the admin panel:");
+                if (password === 'password123') {
+                    panel.style.display = "block";
+                    button.textContent = "Close Admin Panel";
+                    fetchExceptions();
+                } else {
+                    showAlert("Incorrect password.", 'alert-error');
+                }
+            }
+        }
+
+        async function fetchExceptions() {
+            try {
+                const response = await fetch('/api/exceptions');
+                const exceptions = await response.json();
+                
+                const exceptionsList = document.getElementById('exceptions-list');
+                exceptionsList.innerHTML = ''; // Clear the list
+                
+                if (response.ok) {
+                    exceptions.forEach(ex => {
+                        const li = document.createElement('li');
+                        li.textContent = ex.exception_text;
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'btn btn-delete';
+                        deleteBtn.textContent = 'Delete';
+                        deleteBtn.onclick = () => deleteException(ex.id);
+                        li.appendChild(deleteBtn);
+                        exceptionsList.appendChild(li);
+                    });
+                } else {
+                    showAlert(exceptions.error, 'alert-error');
+                }
+            } catch (e) {
+                showAlert("Could not load exceptions. Check server connection.", 'alert-error');
+                console.error("Error fetching exceptions:", e);
+            }
+        }
+
+        async function addException() {
+            const exceptionText = document.getElementById('exception-input').value.trim();
+            if (!exceptionText) {
+                showAlert("Please enter a string to add.", 'alert-error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/exceptions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ exception_text: exceptionText })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert(data.message, 'alert-success');
+                    document.getElementById('exception-input').value = '';
+                    fetchExceptions(); // Refresh the list
+                } else {
+                    showAlert(data.error, 'alert-error');
+                }
+            } catch (e) {
+                showAlert("Could not connect to the server.", 'alert-error');
+                console.error("Error adding exception:", e);
+            }
+        }
+
+        async function deleteException(id) {
+            try {
+                const response = await fetch(`/api/exceptions/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert(data.message, 'alert-success');
+                    fetchExceptions(); // Refresh the list
+                } else {
+                    showAlert(data.error, 'alert-error');
+                }
+            } catch (e) {
+                showAlert("Could not connect to the server.", 'alert-error');
+                console.error("Error deleting exception:", e);
+            }
+        }
+
+        // --- Printing Functions ---
+        async function printLabel() {
+            const jobNo = document.getElementById('job-number-input').value.trim();
+            const sanitizedJobNo = jobNo.toUpperCase().startsWith('C') ? jobNo.substring(1).toUpperCase() : jobNo.toUpperCase();
+
+            if (!sanitizedJobNo) {
+                showAlert("Please enter a valid job number.", 'alert-error');
+                return;
+            }
+
+            try {
+                // 1. Fetch job data
+                const jobResponse = await fetch(`/api/job_order/${sanitizedJobNo}`);
+                if (!jobResponse.ok) {
+                    const errorData = await jobResponse.json();
+                    throw new Error(errorData.error || 'Job number not found.');
+                }
+                const jobData = await jobResponse.json();
+
+                // 2. Fetch exception strings
+                const exceptionsResponse = await fetch('/api/exceptions');
+                const exceptions = await exceptionsResponse.json();
+
+                // 3. Check for exceptions
+                const fpartno = jobData.fpartno || '';
+                for (const ex of exceptions) {
+                    if (fpartno.includes(ex.exception_text)) {
+                        showAlert(`Printing rejected: fpartno contains the forbidden string '${ex.exception_text}'.`, 'alert-error');
+                        return;
+                    }
+                }
+
+                // 4. Get the label format
+                const labelXmlResponse = await fetch('/api/get_label_format');
+                if (!labelXmlResponse.ok) {
+                    const errorData = await labelXmlResponse.json();
+                    throw new Error(errorData.error || 'Label file not found.');
+                }
+                const labelXml = await labelXmlResponse.text();
+
+                // 5. Get the printer and print the labels
+                const printers = dymo.label.framework.getPrinters();
+                const printer = printers.find(p => p.modelName === "DYMO LabelWriter 550");
+                if (!printer) {
+                    throw new Error("DYMO LabelWriter 550 not found!");
+                }
+
+                var label = dymo.label.framework.openLabelXml(labelXml);
+
+                var today = new Date();
+                var dateString = today.toLocaleDateString();
+
+                var finalRev = jobData.final_rev;
+                var fquantity = parseInt(jobData.fquantity, 10);
+
+                if (isNaN(fquantity)) {
+                    throw new Error("fquantity is not a valid number.");
+                }
+
+                // Set the label data
+                label.setObjectText('fpartno', fpartno || '');
+                label.setObjectText('fjobno', sanitizedJobNo);
+                label.setObjectText('FINAL REV', finalRev || '');
+                label.setObjectText('fquantity', fquantity);
+                label.setObjectText('date', dateString);
+
+                // Print the label multiple times
+                for (var i = 0; i < fquantity; i++) {
+                    label.print(printer.name);
+                }
+
+                savePrintedJob(sanitizedJobNo, new Date().toISOString());
+
+                showAlert("Labels sent to printer!", 'alert-success');
+
+            } catch (e) {
+                showAlert("An error occurred: " + e.message, 'alert-error');
+                console.error("Error during printing:", e);
+            }
+        }
+
+        function savePrintedJob(jobNo, timestamp) {
+            // This is a stub. Implement saving logic if needed.
+            console.log('Printed job:', jobNo, timestamp);
+        }
+
+        async function uploadLabelTemplate() {
+            const input = document.getElementById('label-template-input');
+            if (!input.files.length) {
+                showAlert('Please select a .dymo file to upload.', 'alert-error');
+                return;
+            }
+            const file = input.files[0];
+            const formData = new FormData();
+            formData.append('label_file', file);
+            try {
+                const response = await fetch('/upload_label_template', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert(data.message || 'Label template uploaded!', 'alert-success');
+                    input.value = '';
+                } else {
+                    showAlert(data.error || 'Upload failed.', 'alert-error');
+                }
+            } catch (e) {
+                showAlert('Could not connect to the server.', 'alert-error');
+                console.error('Error uploading label template:', e);
+            }
+        }
+
+        async function uploadGastonLabelTemplate() {
+            const input = document.getElementById('gaston-label-template-input');
+            if (!input.files.length) {
+                showAlert('Please select a .dymo file to upload.', 'alert-error');
+                return;
+            }
+            const file = input.files[0];
+            const formData = new FormData();
+            formData.append('label_file', file);
+            try {
+                const response = await fetch('/upload_gaston_label_template', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert(data.message || 'Gaston label template uploaded!', 'alert-success');
+                    input.value = '';
+                } else {
+                    showAlert(data.error || 'Upload failed.', 'alert-error');
+                }
+            } catch (e) {
+                showAlert('Could not connect to the server.', 'alert-error');
+                console.error('Error uploading Gaston label template:', e);
+            }
+        }
+    </script>
+</body>
+</html>

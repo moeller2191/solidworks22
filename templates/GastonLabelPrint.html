@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gaston Label Printer</title>
+    <script src="/static/dymo.connect.framework.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.17.0/dist/xlsx.full.min.js"></script>
+    <style>
+        /* Modern & Clean Design */
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --background-color: #f4f7f9;
+            --card-background: #fff;
+            --text-color: #333;
+            --border-color: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background-color: var(--card-background);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px var(--shadow-color);
+            text-align: center;
+        }
+
+        .logo {
+            max-width: 150px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #7f8c8d;
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            text-align: left;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input[type="file"],
+        input[type="text"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="file"]:focus,
+        input[type="text"]:focus {
+            border-color: var(--secondary-color);
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px 20px;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .alert-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            display: none;
+            text-align: left;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dymo Gaston Label Printer</h1>
+        <p>Please upload your files and then enter the job number to print your alternate labels.</p>
+        
+        <label for="jobNoInput">Enter Job Number:</label>
+        <input type="text" id="jobNoInput" placeholder="e.g., H0624-0000">
+        <button onclick="printGastonLabel()">Print Gaston Label</button>
+        <br><br>
+        <button id="adminBtn" style="background-color: #2c3e50; color: white; width: 100%; margin-bottom: 10px;" onclick="toggleAdminPanel()">Open Admin Panel</button>
+        <div id="adminPanel" style="display:none; text-align:left; margin-top:20px; background:#f4f7f9; padding:20px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+            <h3>Upload Gaston Label Template (.dymo)</h3>
+            <input type="file" id="gastonLabelInput" accept=".dymo">
+            <button onclick="uploadGastonLabelTemplate()">Upload</button>
+        </div>
+    <button style="background-color: #7f8c8d;" onclick="window.location.href='/'">Return to Home</button>
+        <div id="alertBox" class="alert-box"></div>
+    </div>
+
+    <script>
+        function showAlert(message, type) {
+            var alertBox = document.getElementById('alertBox');
+            alertBox.textContent = message;
+            alertBox.className = 'alert-box ' + type;
+            alertBox.style.display = 'block';
+        }
+
+        function toggleAdminPanel() {
+            var panel = document.getElementById('adminPanel');
+            var btn = document.getElementById('adminBtn');
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+                btn.textContent = 'Open Admin Panel';
+            } else {
+                var password = prompt('Enter admin password:');
+                if (password === 'password123') {
+                    panel.style.display = 'block';
+                    btn.textContent = 'Close Admin Panel';
+                } else {
+                    showAlert('Incorrect password.', 'alert-error');
+                }
+            }
+        }
+
+        function uploadGastonLabelTemplate() {
+            var input = document.getElementById('gastonLabelInput');
+            if (!input.files.length) {
+                showAlert('Please select a .dymo file to upload.', 'alert-error');
+                return;
+            }
+            var file = input.files[0];
+            var formData = new FormData();
+            formData.append('label_file', file);
+            fetch('/upload_gaston_label_template', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    showAlert(data.message, 'alert-success');
+                    input.value = '';
+                } else {
+                    showAlert(data.error || 'Upload failed.', 'alert-error');
+                }
+            })
+            .catch(e => {
+                showAlert('Could not connect to the server.', 'alert-error');
+                console.error('Error uploading label template:', e);
+            });
+        }
+
+        async function printGastonLabel() {
+            var jobNo = document.getElementById('jobNoInput').value.trim();
+            if (!jobNo) {
+                showAlert("Please enter a job number.", 'alert-error');
+                return;
+            }
+            var sanitizedJobNo = jobNo.toUpperCase().startsWith('C') ? jobNo.substring(1) : jobNo;
+            try {
+                // Fetch job data from backend
+                const jobResponse = await fetch(`/api/job_order/${sanitizedJobNo}`);
+                if (!jobResponse.ok) {
+                    const errorData = await jobResponse.json();
+                    throw new Error(errorData.error || 'Job number not found.');
+                }
+                const jobData = await jobResponse.json();
+
+                // Fetch Gaston DYMO label template from backend
+                const labelXmlResponse = await fetch('/api/get_gaston_label_format');
+                if (!labelXmlResponse.ok) {
+                    const errorData = await labelXmlResponse.json();
+                    throw new Error(errorData.error || 'Gaston label file not found.');
+                }
+                const dymoLabelXml = await labelXmlResponse.text();
+
+                // Find the printer
+                var printers = dymo.label.framework.getPrinters();
+                if (printers.length === 0) {
+                    throw new Error("No DYMO printers are installed or connected.");
+                }
+                var printer = printers.find(p => p.modelName === "DYMO LabelWriter 550");
+                if (!printer) {
+                    throw new Error("DYMO LabelWriter 550 not found!");
+                }
+
+                var label = dymo.label.framework.openLabelXml(dymoLabelXml);
+
+                var combinedGaston = jobData['combined_gaston'] || jobData['CombinedGaston'] || '';
+                var combinedCarrier = jobData['combined_carrier'] || jobData['CombinedCarrier'] || '';
+                var combinedREVWKYR = jobData['combined_rev_wkyr'] || jobData['CombinedREVWKYR'] || '';
+                var today = new Date();
+                var dateString = today.toLocaleDateString();
+                var fquantity = parseInt(jobData['fquantity'], 10);
+
+                if (isNaN(fquantity)) {
+                    throw new Error("The 'fquantity' column for this job is not a valid number.");
+                }
+
+                // Set the label data
+                label.setObjectText('fjobno', sanitizedJobNo);
+                label.setObjectText('CombinedGaston', combinedGaston);
+                label.setObjectText('CombinedCarrier', combinedCarrier);
+                label.setObjectText('CombinedREVWKYR', combinedREVWKYR);
+                label.setObjectText('Today', dateString);
+
+                // Print the labels
+                for (var i = 0; i < fquantity; i++) {
+                    label.print(printer.name);
+                }
+
+                showAlert("Labels sent to printer!", 'alert-success');
+            } catch (e) {
+                showAlert("An error occurred: " + e.message, 'alert-error');
+                console.error("Error during printing:", e);
+            }
+        }
+    </script>
+</body>
+</html>
